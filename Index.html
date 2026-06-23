@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oscillation Dynamics — Pro Laboratory Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Default Theme Variables (Dark Mode) */
+  :root {
+    --bg: #05070a;
+    --panel-bg: #0f1219;
+    --card-bg: #161a24;
+    --card-hover: #1e2433;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --text: #f3f4f6;
+    --muted: #828ca0;
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.15);
+    --gold: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --cyan: #06b6d4;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --canvas-bg: radial-gradient(ellipse at 50% 20%, #111520 0%, #05070a 80%);
+    --grid-color: rgba(255, 255, 255, 0.03);
+  }
+
+  /* Light Mode Overrides */
+  [data-theme="light"] {
+    --bg: #e2e8f0;
+    --panel-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --card-hover: #f1f5f9;
+    --border: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.15);
+    --text: #0f172a;
+    --muted: #475569;
+    --accent: #2563eb;
+    --accent-glow: rgba(37, 99, 235, 0.1);
+    --gold: #d97706;
+    --green: #059669;
+    --red: #dc2626;
+    --cyan: #0891b2;
+    --shadow: rgba(0, 0, 0, 0.05);
+    --canvas-bg: radial-gradient(ellipse at 50% 20%, #f1f5f9 0%, #e2e8f0 80%);
+    --grid-color: rgba(0, 0, 0, 0.03);
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    transition: background 0.3s ease, color 0.3s ease;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--panel-bg); z-index: 10; box-shadow: 0 4px 20px -5px var(--shadow); }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px;}
+  .header-title::before { content: ''; display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); }
+  .badge { font-size: 10px; padding: 4px 10px; border-radius: 20px; background: var(--accent-glow); color: var(--accent); border: 1px solid rgba(59, 130, 246, 0.3); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;}
+  
+  .theme-toggle { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 2px 4px var(--shadow); }
+  .theme-toggle:hover { background: var(--card-hover); border-color: var(--accent); transform: translateY(-1px); }
+
+  .layout { display: grid; grid-template-columns: 340px 1fr 340px; flex: 1; overflow: hidden; }
+
+  .side-panel { border-right: 1px solid var(--border); background: var(--panel-bg); overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+  .side-panel.right { border-right: none; border-left: 1px solid var(--border); }
+  
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+  .mode-tabs { display: flex; gap: 6px; background: var(--card-bg); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
+  .mode-tab { flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 600; border: none; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.2s ease; text-align: center; }
+  .mode-tab.active { background: var(--accent); color: #ffffff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+  .mode-tab:not(.active):hover { color: var(--text); background: var(--card-hover); }
+
+  .slider-block { margin-bottom: 2px; }
+  .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .slider-name { font-size: 12px; font-weight: 500; color: var(--text); }
+  .slider-val { font-size: 11px; font-family: var(--mono); font-weight: 600; color: var(--accent); background: var(--accent-glow); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.2); min-width: 50px; text-align: right;}
+  input[type=range] { width: 100%; height: 4px; cursor: pointer; accent-color: var(--accent); border-radius: 10px; background: var(--card-bg); border: 1px solid var(--border); outline: none; transition: 0.2s; }
+  input[type=range]:hover { height: 6px; }
+
+  .ctrl-row { display: flex; gap: 8px; }
+  .ctrl-btn { flex: 1; padding: 12px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid var(--border-strong); background: var(--card-bg); color: var(--text); cursor: pointer; transition: all 0.2s ease; text-align: center; box-shadow: 0 2px 5px var(--shadow); display: flex; align-items: center; justify-content: center; gap: 6px;}
+  .ctrl-btn:hover { background: var(--card-hover); border-color: var(--accent); color: var(--accent); transform: translateY(-1px);}
+  .ctrl-btn.active { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+  .ctrl-btn.danger { border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); color: var(--red); }
+  .ctrl-btn.danger:hover { background: rgba(239, 68, 68, 0.15); border-color: var(--red); color: var(--red); }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .checkbox-wrapper { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 500; color: var(--text); cursor: pointer; padding: 8px 10px; border-radius: 8px; background: var(--card-bg); border: 1px solid var(--border); transition: all 0.2s;}
+  .checkbox-wrapper:hover { border-color: var(--accent); background: var(--card-hover);}
+  .checkbox-wrapper input { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+
+  .center { position: relative; overflow: hidden; background: var(--canvas-bg); display: flex; flex-direction: column;}
+  #sim { width: 100%; height: 100%; display: block; flex: 1; }
+  
+  /* Overload Animation for Resonance */
+  @keyframes overloadPulse {
+    0% { box-shadow: inset 0 0 0px var(--red); }
+    50% { box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.3); }
+    100% { box-shadow: inset 0 0 0px var(--red); }
+  }
+  .center.overload { animation: overloadPulse 0.5s infinite; border: 2px solid var(--red); }
+
+  .metric-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; box-shadow: 0 2px 8px var(--shadow); transition: transform 0.2s, border-color 0.2s; display: flex; flex-direction: column; gap: 4px;}
+  .metric-box:hover { border-color: var(--border-strong); }
+  .metric-val { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--text); letter-spacing: -0.02em;}
+  .metric-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Energy Bars */
+  .energy-container { display: flex; flex-direction: column; gap: 8px; margin-top: 4px;}
+  .energy-row { display: flex; align-items: center; gap: 10px; }
+  .energy-label { font-size: 10px; font-weight: 700; width: 30px; color: var(--text); }
+  .energy-bar-bg { flex: 1; height: 8px; background: rgba(0,0,0,0.15); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);}
+  .energy-bar-fill { height: 100%; width: 0%; transition: width 0.1s linear; border-radius: 10px; }
+  .bar-ke { background: linear-gradient(90deg, #f59e0b, #fbbf24); box-shadow: 0 0 10px rgba(245,158,11,0.6); }
+  .bar-pe { background: linear-gradient(90deg, #10b981, #34d399); box-shadow: 0 0 10px rgba(16,185,129,0.6); }
+  .bar-te { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+
+  .graph-wrap { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 4px 15px var(--shadow); display: flex; flex-direction: column; transition: border-color 0.3s; margin-bottom: 0;}
+  .graph-wrap:hover { border-color: var(--border-strong); }
+  .graph-title { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 8px; letter-spacing: 0.02em; display: flex; justify-content: space-between;}
+  .graph-title span { color: var(--muted); font-weight: 400; font-family: var(--mono); font-size: 10px; }
+  canvas[id^="graph"] { width: 100%; border-radius: 6px; display: block; background: var(--panel-bg); border: 1px solid var(--border); }
+
+  .divider { height: 1px; background: var(--border); margin: 2px 0; }
+  
+  .highlight-box { border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.05); padding: 14px; border-radius: 10px; position: relative; overflow: hidden;}
+  .highlight-box::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--gold); }
+  .highlight-title { font-size: 11px; color: var(--gold); font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; letter-spacing: 0.05em;}
+  
+  /* HUD overlay on Canvas */
+  .canvas-hud { position: absolute; top: 16px; left: 16px; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
+  .hud-item { background: rgba(0,0,0,0.6); border: 1px solid var(--border-strong); padding: 4px 10px; border-radius: 6px; font-family: var(--mono); font-size: 11px; color: var(--text); backdrop-filter: blur(4px); display: flex; gap: 8px;}
+  .hud-item span { color: var(--accent); font-weight: 700; }
+  
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="header-title">Oscillation Dynamics Laboratory</div>
+    <span class="badge">Pro Edition v5.0</span>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+    <span id="themeIcon">☀️</span> สลับโหมดสว่าง
+  </button>
+</header>
+
+<div class="layout">
+
+  <aside class="side-panel">
+    <div>
+      <div class="section-label">⚙️ โหมดจำลองฟิสิกส์ (Physics Mode)</div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setMode('pendulum',this)">ลูกตุ้ม (Pendulum)</button>
+        <button class="mode-tab" onclick="setMode('spring',this)">สปริง (Spring)</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">🎛️ พารามิเตอร์ระบบ (System Parameters)</div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="slider-block">
+          <div class="slider-header"><span class="slider-name" id="lenLabel">ความยาวสาย (L)</span><span class="slider-val" id="lenVal">1.00 m</span></div>
+          <input type="range" id="slLen" min="0.3" max="3.5" step="0.05" value="1.0" oninput="onParam()">
+        </div>
+        <div class="slider-block">
+          <div class="slider-header"><span class="slider-name" id="ampLabel">แอมพลิจูด (θ₀)</span><span class="slider-val" id="ampVal">30°</span></div>
+          <input type="range" id="slAmp" min="5" max="85" step="1" value="30" oninput="onParam()">
+        </div>
+        <div class="slider-block">
+          <div class="slider-header"><span class="slider-name">ความหน่วง (Damping β)</span><span class="slider-val" id="dampVal">0.00</span></div>
+          <input type="range" id="slDamp" min="0" max="0.5" step="0.01" value="0" oninput="onParam()">
+        </div>
+        <div class="slider-block" id="gravitySliderBlock">
+          <div class="slider-header"><span class="slider-name">แรงโน้มถ่วง (g)</span><span class="slider-val" id="gVal">9.81 m/s²</span></div>
+          <input type="range" id="slG" min="0.0" max="25.0" step="0.1" value="9.81" oninput="onParam()">
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <div class="highlight-title">⚡ แรงกระตุ้น & สั่นพ้อง (Forced / Resonance)</div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="slider-block">
+          <div class="slider-header"><span class="slider-name">ขนาดแรงกระตุ้น (F₀)</span><span class="slider-val" style="color:var(--gold); border-color:var(--gold)" id="driveAmpVal">0.0 N</span></div>
+          <input type="range" id="slDriveAmp" min="0" max="10" step="0.1" value="0" oninput="onParam()">
+        </div>
+        <div class="slider-block">
+          <div class="slider-header">
+            <span class="slider-name">ความถี่กระตุ้น (ω_d)</span>
+            <span class="slider-val" style="color:var(--gold); border-color:var(--gold)" id="driveFreqVal">1.0 Hz</span>
+          </div>
+          <input type="range" id="slDriveFreq" min="0.1" max="5.0" step="0.05" value="1.0" oninput="onParam()">
+        </div>
+      </div>
+      <div style="font-size:10px; color:var(--muted); margin-top:10px; line-height:1.5;">
+        * ทริค: ปรับ <b>ω_d</b> ให้ตรงกับ <b>ω_n</b> (ความถี่ธรรมชาติมุมขวาล่าง) เพื่อสร้างสถานะ <b>Resonance (การสั่นพ้อง)</b> ที่จะทำลายขีดจำกัดพลังงาน!
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="section-label">👁️ มุมมอง (Visualization)</div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="slider-block">
+          <div class="slider-header"><span class="slider-name">ความเร็วจำลอง (Time Scale)</span><span class="slider-val" id="speedVal">1.0x</span></div>
+          <input type="range" id="slSpeed" min="0.1" max="3.0" step="0.1" value="1.0" oninput="updateSpeed()">
+        </div>
+        <div class="options-grid">
+          <label class="checkbox-wrapper"><input type="checkbox" id="cbTrail" checked onchange="toggleOptions()"> เส้นรอยทาง (Trail)</label>
+          <label class="checkbox-wrapper"><input type="checkbox" id="cbVector" checked onchange="toggleOptions()"> เวกเตอร์ฟิสิกส์</label>
+          <label class="checkbox-wrapper" style="grid-column: span 2;"><input type="checkbox" id="cbHUD" checked onchange="toggleOptions()"> แสดงข้อมูล HUD บนจอ</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-row" style="margin-top: auto;">
+      <button class="ctrl-btn" id="pauseBtn" onclick="togglePause()">⏸️ หยุดชั่วคราว</button>
+      <button class="ctrl-btn danger" onclick="resetSim()">↺ รีเซ็ตระบบ</button>
+    </div>
+  </aside>
+
+  <main class="center" id="simContainer">
+    <div class="canvas-hud" id="hudBox">
+      <div class="hud-item">TIME: <span id="hudTime">0.00s</span></div>
+      <div class="hud-item" style="color:var(--cyan)">POS: <span id="hudPos" style="color:var(--cyan)">0.00</span></div>
+      <div class="hud-item" style="color:var(--gold)">VEL: <span id="hudVel" style="color:var(--gold)">0.00</span></div>
+      <div class="hud-item" style="color:var(--red)" id="hudWarn" style="display:none;">⚠️ RESONANCE OVERLOAD</div>
+    </div>
+    <canvas id="sim"></canvas>
+  </main>
+
+  <aside class="side-panel right">
+    
+    <div>
+      <div class="section-label">📈 คลื่นตำแหน่ง (Time-Series)</div>
+      <div class="graph-wrap">
+        <div class="graph-title">Displacement x(t) <span id="gTimeMax">Max: 0.0</span></div>
+        <canvas id="graphTime" height="110"></canvas>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">📊 เฟสสเปซ (Phase Portrait)</div>
+      <div class="graph-wrap">
+        <div class="graph-title">Velocity v(x) <span>Shape: Ellipse</span></div>
+        <canvas id="graphPhase" height="140"></canvas>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">⚡ ระดับพลังงาน (Energy State)</div>
+      <div class="metric-box">
+        <div class="energy-container">
+          <div class="energy-row"><span class="energy-label">KE</span><div class="energy-bar-bg"><div class="energy-bar-fill bar-ke" id="barKE"></div></div></div>
+          <div class="energy-row"><span class="energy-label">PE</span><div class="energy-bar-bg"><div class="energy-bar-fill bar-pe" id="barPE"></div></div></div>
+          <div class="energy-row"><span class="energy-label">TOTAL</span><div class="energy-bar-bg"><div class="energy-bar-fill bar-te" id="barTE" style="width:100%"></div></div></div>
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+        <div class="metric-box" style="padding: 10px;">
+          <div class="metric-val" id="mPos" style="color: var(--cyan);">0.00</div>
+          <div class="metric-label" id="lblPos">ตำแหน่ง (x)</div>
+        </div>
+        <div class="metric-box" style="padding: 10px; border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);">
+          <div class="metric-val" id="mFreq" style="color: var(--green);">0.00</div>
+          <div class="metric-label">ความถี่ธรรมชาติ (ω_n)</div>
+        </div>
+      </div>
+    </div>
+    
+    <button class="ctrl-btn" style="margin-top:auto; background: var(--bg); border-color: var(--accent); color: var(--text);" onclick="exportDataCSV()">
+      💾 ดึงข้อมูลเชิงวิเคราะห์ (CSV)
+    </button>
+
+  </aside>
+</div>
+
+<script>
+/* ══════ STATE ENGINE ══════ */
+let mode = 'pendulum';
+let L = 1.0, amp = 30, damp = 0, g = 9.81;
+let driveAmp = 0, driveFreq = 1.0;
+let pos = 0, vel = 0, acc = 0; 
+let mass = 1.0; 
+let timeScale = 1.0, simTime = 0;
+let showTrail = true, showVector = true, showHUD = true;
+let paused = false, lastRAF = null;
+let maxPosGraph = 0.01;
+
+let graphData = [];
+let trailPoints = [];
+const GRAPH_MAX = 350;
+const TRAIL_MAX = 80;
+
+const simContainer = document.getElementById('simContainer');
+const simEl = document.getElementById('sim');
+const sc = simEl.getContext('2d');
+const gcPhaseEl = document.getElementById('graphPhase');
+const gcPhase = gcPhaseEl.getContext('2d');
+const gcTimeEl = document.getElementById('graphTime');
+const gcTime = gcTimeEl.getContext('2d');
+const PR = window.devicePixelRatio || 2;
+
+function resizeCanvases() {
+  const pw = simEl.parentElement.clientWidth;
+  const ph = simEl.parentElement.clientHeight;
+  simEl.width = pw * PR; simEl.height = ph * PR;
+  simEl.style.width = pw + 'px'; simEl.style.height = ph + 'px';
+  sc.scale(PR, PR);
+  
+  const gw = gcPhaseEl.parentElement.clientWidth - 26;
+  gcPhaseEl.width = gw * PR; gcPhaseEl.height = 140 * PR;
+  gcPhaseEl.style.width = gw + 'px'; gcPhaseEl.style.height = '140px';
+  gcPhase.scale(PR, PR);
+
+  gcTimeEl.width = gw * PR; gcTimeEl.height = 110 * PR;
+  gcTimeEl.style.width = gw + 'px'; gcTimeEl.style.height = '110px';
+  gcTime.scale(PR, PR);
+}
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+function toggleTheme() {
+  const currentTheme = document.body.getAttribute('data-theme');
+  const targetTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.body.setAttribute('data-theme', targetTheme);
+  const themeBtn = document.getElementById('themeBtn');
+  document.getElementById('themeIcon').textContent = targetTheme === 'light' ? '🌙' : '☀️';
+  themeBtn.childNodes[2].nodeValue = targetTheme === 'light' ? ' สลับโหมดมืด' : ' สลับโหมดสว่าง';
+}
+
+function updateSpeed() {
+  timeScale = parseFloat(document.getElementById('slSpeed').value);
+  document.getElementById('speedVal').textContent = timeScale.toFixed(1) + 'x';
+}
+
+function toggleOptions() {
+  showTrail = document.getElementById('cbTrail').checked;
+  showVector = document.getElementById('cbVector').checked;
+  showHUD = document.getElementById('cbHUD').checked;
+  
+  document.getElementById('hudBox').style.display = showHUD ? 'flex' : 'none';
+  if (!showTrail) trailPoints = [];
+}
+
+function setMode(m, btn) {
+  mode = m;
+  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const sl = document.getElementById('slLen');
+  const gSlider = document.getElementById('gravitySliderBlock');
+  
+  if (m === 'spring') {
+    sl.min = 2; sl.max = 30; sl.step = 0.5; sl.value = 10;
+    document.getElementById('lenLabel').textContent = 'ค่าคงที่สปริง k (N/m)';
+    document.getElementById('ampLabel').textContent = 'ระยะยืด (cm)';
+    document.getElementById('lblPos').textContent = 'ระยะกระจัด x (m)';
+    gSlider.style.opacity = "0.3"; 
+  } else {
+    sl.min = 0.3; sl.max = 3.5; sl.step = 0.05; sl.value = 1.0;
+    document.getElementById('lenLabel').textContent = 'ความยาวสาย L (m)';
+    document.getElementById('ampLabel').textContent = 'มุมเริ่มต้น (°)';
+    document.getElementById('lblPos').textContent = 'มุม θ (°)';
+    gSlider.style.opacity = "1.0";
+  }
+  onParam();
+  resetSim();
+}
+
+function onParam() {
+  L = parseFloat(document.getElementById('slLen').value);
+  amp = parseFloat(document.getElementById('slAmp').value);
+  damp = parseFloat(document.getElementById('slDamp').value);
+  g = parseFloat(document.getElementById('slG').value);
+  driveAmp = parseFloat(document.getElementById('slDriveAmp').value);
+  driveFreq = parseFloat(document.getElementById('slDriveFreq').value);
+  
+  document.getElementById('lenVal').textContent = L.toFixed(2) + (mode==='pendulum'?' m':' N/m');
+  document.getElementById('ampVal').textContent = amp + (mode==='pendulum'?'°':' cm');
+  document.getElementById('dampVal').textContent = damp.toFixed(2);
+  document.getElementById('gVal').textContent = g.toFixed(2) + ' m/s²';
+  document.getElementById('driveAmpVal').textContent = driveAmp.toFixed(1) + ' N';
+  document.getElementById('driveFreqVal').textContent = driveFreq.toFixed(2) + ' rad/s';
+  
+  let wn = mode === 'spring' ? Math.sqrt(L/mass) : Math.sqrt(g/L);
+  document.getElementById('mFreq').textContent = wn.toFixed(2);
+
+  if(paused && vel === 0 && acc === 0) resetSim();
+}
+
+function resetSim() {
+  graphData = [];
+  trailPoints = [];
+  simTime = 0;
+  maxPosGraph = mode === 'pendulum' ? (amp * Math.PI / 180)*1.2 : (amp / 100)*1.2;
+  simContainer.classList.remove('overload');
+  document.getElementById('hudWarn').style.display = 'none';
+
+  if (mode === 'pendulum') pos = amp * Math.PI / 180; 
+  else pos = amp / 100; 
+  vel = 0; acc = 0;
+}
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? '▶️ เล่น' : '⏸️ หยุดชั่วคราว';
+  if (!paused) lastRAF = null;
+}
+
+function stepPhysics(dt) {
+  simTime += dt;
+  let drivingForce = driveAmp * Math.cos(driveFreq * simTime);
+  
+  if (mode === 'pendulum') {
+    acc = -(g / L) * Math.sin(pos) - damp * vel + drivingForce;
+  } else if (mode === 'spring') {
+    acc = -(L / mass) * pos - damp * vel + drivingForce;
+  }
+  vel += acc * dt;
+  pos += vel * dt;
+}
+
+function updateData() {
+  let displayPos = mode === 'pendulum' ? (pos * 180 / Math.PI) : pos;
+  let posStr = displayPos.toFixed(2) + (mode==='pendulum'?'°':'m');
+  
+  document.getElementById('mPos').textContent = posStr;
+  document.getElementById('hudTime').textContent = simTime.toFixed(2) + 's';
+  document.getElementById('hudPos').textContent = posStr;
+  document.getElementById('hudVel').textContent = vel.toFixed(2) + (mode==='pendulum'?' rad/s':' m/s');
+  
+  let initAmp = mode === 'pendulum' ? amp*Math.PI/180 : amp/100;
+  if(Math.abs(pos) > initAmp * 2.5 && driveAmp > 0) {
+    simContainer.classList.add('overload');
+    document.getElementById('hudWarn').style.display = 'block';
+  } else if (Math.abs(pos) < initAmp * 2.0) {
+    simContainer.classList.remove('overload');
+    document.getElementById('hudWarn').style.display = 'none';
+  }
+
+  let KE = 0, PE = 0, maxE = 0;
+  if (mode === 'pendulum') {
+    KE = 0.5 * mass * Math.pow(L * vel, 2);
+    PE = mass * g * L * (1 - Math.cos(pos));
+    maxE = mass * g * L * (1 - Math.cos(initAmp)); 
+  } else {
+    KE = 0.5 * mass * Math.pow(vel, 2);
+    PE = 0.5 * L * Math.pow(pos, 2);
+    maxE = 0.5 * L * Math.pow(initAmp, 2);
+  }
+  
+  if(maxE === 0) maxE = 0.1; 
+  let TE = KE + PE;
+  if (TE > maxE && driveAmp === 0) maxE = TE; 
+  else if (driveAmp > 0) maxE = Math.max(maxE, TE); 
+
+  document.getElementById('barKE').style.width = Math.min((KE / maxE) * 100, 100) + "%";
+  document.getElementById('barPE').style.width = Math.min((PE / maxE) * 100, 100) + "%";
+  document.getElementById('barTE').style.width = Math.min((TE / maxE) * 100, 100) + "%";
+
+  if(Math.abs(pos) > maxPosGraph) maxPosGraph = Math.abs(pos);
+  document.getElementById('gTimeMax').textContent = `Max: ${maxPosGraph.toFixed(2)}`;
+
+  graphData.push({t: simTime, p: pos, v: vel});
+  if (graphData.length > GRAPH_MAX) graphData.shift();
+}
+
+function drawArrow(ctx, fromX, fromY, toX, toY, color) {
+  const headlen = 10; 
+  const dx = toX - fromX; const dy = toY - fromY;
+  const angle = Math.atan2(dy, dx);
+  if(Math.sqrt(dx*dx + dy*dy) < 3) return;
+
+  ctx.beginPath();
+  ctx.moveTo(fromX, fromY); ctx.lineTo(toX, toY);
+  ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 7), toY - headlen * Math.sin(angle - Math.PI / 7));
+  ctx.moveTo(toX, toY);
+  ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 7), toY - headlen * Math.sin(angle + Math.PI / 7));
+  ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.stroke();
+}
+
+function drawSim(W, H) {
+  sc.clearRect(0, 0, W, H);
+  
+  sc.save(); sc.strokeStyle = getComputedStyle(document.body).getPropertyValue('--grid-color').trim(); sc.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { sc.beginPath(); sc.moveTo(x, 0); sc.lineTo(x, H); sc.stroke(); }
+  for (let y = 0; y < H; y += 40) { sc.beginPath(); sc.moveTo(0, y); sc.lineTo(W, y); sc.stroke(); }
+  
+  sc.beginPath(); sc.moveTo(W/2, 0); sc.lineTo(W/2, H); 
+  sc.strokeStyle = 'rgba(255,255,255,0.05)'; sc.setLineDash([5, 5]); sc.stroke(); sc.setLineDash([]);
+  sc.restore();
+
+  const cx = W / 2, cy = mode === 'pendulum' ? 80 : 50;
+  const accentColor = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+  const mutedColor = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+
+  sc.fillStyle = '#334155'; sc.fillRect(cx - 50, cy - 10, 100, 10);
+  sc.beginPath(); sc.arc(cx, cy, 6, 0, Math.PI * 2); sc.fillStyle = '#fff'; sc.fill();
+
+  let bobX = cx, bobY = cy;
+  let scale = 0;
+
+  if (mode === 'pendulum') {
+    const maxLength = H - cy - 60;
+    scale = Math.min(maxLength, (L / 3.5) * maxLength);
+    bobX = cx + scale * Math.sin(pos);
+    bobY = cy + scale * Math.cos(pos);
+    
+    if(Math.abs(pos) > 0.05) {
+      sc.beginPath();
+      sc.arc(cx, cy, scale * 0.3, Math.PI/2, Math.PI/2 - pos, pos > 0);
+      sc.strokeStyle = 'rgba(6, 182, 212, 0.4)'; sc.lineWidth = 4; sc.stroke();
+    }
+
+    sc.beginPath(); sc.moveTo(cx, cy); sc.lineTo(bobX, bobY);
+    sc.strokeStyle = '#94a3b8'; sc.lineWidth = 2.5; sc.stroke();
+  } 
+  else if (mode === 'spring') {
+    scale = 200; 
+    bobY = cy + 150 + (pos * scale);
+    
+    sc.beginPath(); sc.moveTo(cx - 30, cy + 150); sc.lineTo(cx - 20, cy + 150);
+    sc.strokeStyle = mutedColor; sc.lineWidth = 2; sc.stroke();
+    sc.font = "10px JetBrains Mono"; sc.fillStyle = mutedColor; sc.fillText("0", cx - 45, cy + 154);
+
+    sc.beginPath(); sc.moveTo(cx, cy);
+    const coils = 16; const stepY = (bobY - cy) / coils;
+    for (let i = 0; i <= coils; i++) { sc.lineTo(cx + (i%2===0?18:-18)* (i===0||i===coils?0:1), cy + i * stepY); }
+    sc.strokeStyle = '#64748b'; sc.lineWidth = 3; sc.lineJoin = 'round'; sc.stroke();
+  }
+
+  if (showTrail) {
+    if (!paused) trailPoints.push({x: bobX, y: bobY});
+    if (trailPoints.length > TRAIL_MAX) trailPoints.shift();
+    if (trailPoints.length > 1) {
+      sc.beginPath();
+      for(let i=0; i<trailPoints.length; i++) {
+        if(i===0) sc.moveTo(trailPoints[i].x, trailPoints[i].y);
+        else sc.lineTo(trailPoints[i].x, trailPoints[i].y);
+      }
+      sc.strokeStyle = 'rgba(59, 130, 246, 0.4)'; sc.lineWidth = 4; sc.lineCap = 'round'; sc.stroke();
+    }
+  }
+
+  sc.save();
+  sc.shadowBlur = 15; sc.shadowColor = accentColor;
+  sc.beginPath(); sc.arc(bobX, bobY, 22, 0, Math.PI * 2);
+  sc.fillStyle = accentColor; sc.fill();
+  sc.lineWidth = 2; sc.strokeStyle = '#ffffff'; sc.stroke();
+  sc.restore();
+
+  if (showVector) {
+    const vScale = 12, aScale = 4;
+    const colorV = getComputedStyle(document.body).getPropertyValue('--gold').trim();
+    const colorA = getComputedStyle(document.body).getPropertyValue('--red').trim();
+    
+    if (mode === 'pendulum') {
+      let vx = vel * Math.cos(pos) * vScale;
+      let vy = -vel * Math.sin(pos) * vScale;
+      drawArrow(sc, bobX, bobY, bobX + vx, bobY + vy, colorV);
+      
+      let ax = acc * Math.cos(pos) * aScale;
+      let ay = -acc * Math.sin(pos) * aScale;
+      drawArrow(sc, bobX, bobY, bobX + ax, bobY + ay, colorA);
+    } else {
+      drawArrow(sc, bobX, bobY + 25, bobX, bobY + 25 + (vel * vScale * 2), colorV);
+      drawArrow(sc, bobX, bobY - 25, bobX, bobY - 25 + (acc * aScale * 4), colorA);
+    }
+  }
+}
+
+function drawGraphs() {
+  if (graphData.length < 2) return;
+  const accentColor = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+  const cyanColor = getComputedStyle(document.body).getPropertyValue('--cyan').trim();
+  const gridColor = 'rgba(148, 163, 184, 0.15)';
+  
+  const Wp = gcPhaseEl.clientWidth, Hp = 140;
+  gcPhase.clearRect(0, 0, Wp, Hp);
+  gcPhase.strokeStyle = gridColor; gcPhase.lineWidth = 1;
+  gcPhase.beginPath(); gcPhase.moveTo(0, Hp / 2); gcPhase.lineTo(Wp, Hp / 2); gcPhase.stroke(); 
+  gcPhase.beginPath(); gcPhase.moveTo(Wp / 2, 0); gcPhase.lineTo(Wp / 2, Hp); gcPhase.stroke(); 
+
+  let maxP = Math.max(...graphData.map(d => Math.abs(d.p)), 0.001) * 1.1;
+  let maxV = Math.max(...graphData.map(d => Math.abs(d.v)), 0.001) * 1.1;
+
+  gcPhase.beginPath();
+  graphData.forEach((d, i) => {
+    let px = Wp / 2 + (d.p / maxP) * (Wp / 2 - 15);
+    let py = Hp / 2 - (d.v / maxV) * (Hp / 2 - 15);
+    if (i === 0) gcPhase.moveTo(px, py); else gcPhase.lineTo(px, py);
+  });
+  gcPhase.strokeStyle = accentColor; gcPhase.lineWidth = 2; gcPhase.stroke();
+  
+  let current = graphData[graphData.length - 1];
+  gcPhase.beginPath(); gcPhase.arc(Wp / 2 + (current.p / maxP) * (Wp / 2 - 15), Hp / 2 - (current.v / maxV) * (Hp / 2 - 15), 5, 0, Math.PI * 2);
+  gcPhase.fillStyle = getComputedStyle(document.body).getPropertyValue('--gold').trim(); gcPhase.fill();
+
+  const Wt = gcTimeEl.clientWidth, Ht = 110;
+  gcTime.clearRect(0, 0, Wt, Ht);
+  gcTime.strokeStyle = gridColor; gcTime.lineWidth = 1;
+  gcTime.beginPath(); gcTime.moveTo(0, Ht / 2); gcTime.lineTo(Wt, Ht / 2); gcTime.stroke();
+
+  gcTime.strokeStyle = 'rgba(6, 182, 212, 0.2)'; gcTime.setLineDash([4, 4]);
+  let boundY = Ht/2 - (maxPosGraph / maxPosGraph) * (Ht/2 - 15);
+  gcTime.beginPath(); gcTime.moveTo(0, boundY); gcTime.lineTo(Wt, boundY); gcTime.stroke();
+  gcTime.beginPath(); gcTime.moveTo(0, Ht - boundY); gcTime.lineTo(Wt, Ht - boundY); gcTime.stroke();
+  gcTime.setLineDash([]);
+
+  gcTime.beginPath();
+  graphData.forEach((d, i) => {
+    let px = (i / GRAPH_MAX) * Wt;
+    let py = Ht / 2 - (d.p / maxPosGraph) * (Ht / 2 - 15);
+    if (i === 0) gcTime.moveTo(px, py); else gcTime.lineTo(px, py);
+  });
+  gcTime.strokeStyle = cyanColor; gcTime.lineWidth = 2; gcTime.lineJoin = 'round'; gcTime.stroke();
+}
+
+function exportDataCSV() {
+  if(graphData.length === 0) return alert("ไม่มีข้อมูลสำหรับการดาวน์โหลด");
+  let csvContent = "data:text/csv;charset=utf-8,Time,Position,Velocity\n";
+  graphData.forEach(row => { csvContent += `${row.t.toFixed(4)},${row.p.toFixed(4)},${row.v.toFixed(4)}\n`; });
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "pro_shm_dynamics.csv");
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+}
+
+function loop(ts) {
+  if (!lastRAF) lastRAF = ts;
+  let dt = ((ts - lastRAF) / 1000) * timeScale;
+  lastRAF = ts;
+  dt = Math.min(dt, 0.05 * timeScale); 
+
+  if (!paused) {
+    const steps = 10; const sdt = dt / steps;
+    for (let s = 0; s < steps; s++) stepPhysics(sdt);
+    updateData();
+  }
+
+  drawSim(simEl.clientWidth, simEl.clientHeight);
+  drawGraphs();
+  requestAnimationFrame(loop);
+}
+
+onParam();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
